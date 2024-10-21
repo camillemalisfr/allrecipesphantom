@@ -1,11 +1,26 @@
 'phantombuster command: nodejs';
 'phantombuster package: 5';
-'phantom image: web-node:v1';
+'phantom image: web-node:v3';
 'phantombuster flags: save-folder';
 
 const Buster = require('phantombuster');
 const puppeteer = require('puppeteer');
+const Ajv = require('ajv');
 const buster = new Buster();
+const ajv = new Ajv();
+
+interface Arguments {
+  search: string;
+}
+
+const argumentSchema = {
+  type: 'object',
+  properties: {
+    search: { type: 'string' }
+  },
+  required: ['search'],
+  additionalProperties: false
+};
 
 type Recipe = {
   name?: string | null;
@@ -16,10 +31,15 @@ type Recipe = {
 
 (async () => {
   try {
-    const arg = buster.argument; // TODO: Typing and  JSON Schema validation
+    const validate = ajv.compile(argumentSchema);
+    const arg: Arguments = buster.argument;
     const browser = await puppeteer.launch({
       args: ['--no-sandbox']
     });
+
+    if (!validate(arg)) {
+      throw new Error(JSON.stringify(validate.errors));
+    }
 
     console.info(`... Searching Allrecipes.com with ${arg.search}`);
 
@@ -39,20 +59,21 @@ type Recipe = {
       document
         .querySelectorAll('[id^="mntl-card-list-items_"]')
         .forEach((element) => {
-          const name = element.querySelector('.card__title')?.textContent;
-          const url = element.getAttribute('href');
-          const numberReviewsNode = element.querySelector(
-            '.mm-recipes-card-meta__rating-count-number'
-          );
-          const numberReviewsText = numberReviewsNode?.firstChild;
-          const numberReviews = Number(
-            numberReviewsNode?.removeChild(numberReviewsText!).textContent
-          );
-          data.push({
-            url,
-            name,
-            numberReviews
-          });
+          if (element instanceof HTMLAnchorElement) {
+            const name = element.querySelector('.card__title')?.textContent;
+            const numberReviewsNode = element.querySelector(
+              '.mm-recipes-card-meta__rating-count-number'
+            );
+            const numberReviewsText = numberReviewsNode?.firstChild;
+            const numberReviews = Number(
+              numberReviewsNode?.removeChild(numberReviewsText!).textContent
+            );
+            data.push({
+              name,
+              numberReviews,
+              url: element.href
+            });
+          }
         });
       return data;
     });
