@@ -56,6 +56,6 @@ declare module 'phantombuster' {
     public setResultObject(object: object): Promise<void>;
   }
 
-  // @ts-ignore
+  // "@ts-expect-error"
   export = Buster;
 }
