@@ -5,33 +5,26 @@
 
 import Buster from 'phantombuster';
 import puppeteer from 'puppeteer';
-import Ajv from 'ajv';
-import { Arguments } from './types';
-import { argumentSchema } from './schemas/argument';
 import { scrapeRecipes } from './scraping/allRecipes';
+import { validateArgs } from './utils/validation';
 
 const buster = new Buster();
-const ajv = new Ajv();
 
 (async () => {
   try {
-    const validate = ajv.compile(argumentSchema);
-    const arg = buster.argument as Arguments;
+    // const arg = buster.argument as Arguments;
+    const { search, pages } = validateArgs(buster.argument);
     const browser = await puppeteer.launch({
       args: ['--no-sandbox']
     });
 
-    if (!validate(arg)) {
-      throw new Error(JSON.stringify(validate.errors));
-    }
-
     console.info(
-      `Searching Allrecipes.com with ${arg.search} ${
-        arg.pages ? `| pages: ${arg.pages}` : ''
+      `Searching Allrecipes.com with ${search} ${
+        pages ? `| pages: ${pages}` : ''
       }`
     );
 
-    const recipes = await scrapeRecipes(browser, arg.search, arg.pages);
+    const recipes = await scrapeRecipes(browser, search, pages);
 
     console.info(`Successfully scraped ${recipes.length} recipes`);
     console.debug(recipes);
