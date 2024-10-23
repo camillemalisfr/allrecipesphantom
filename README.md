@@ -2,6 +2,8 @@
 
 ## How to use
 
+Recommended Node Version : `v18`or later
+
 ### install dependencies
 
 ```
