@@ -1,15 +1,17 @@
 import { Browser } from 'puppeteer';
 import { Recipe } from '../types';
 
+const baseUrl = 'https://www.allrecipes.com';
+
 async function scrapeRecipesFromPage(
   browser: Browser,
   search: string,
   pageNumber: number
 ): Promise<Recipe[]> {
   const offset = pageNumber * 24;
-  const baseUrl = `https://www.allrecipes.com/search?q=${search}&offset=${offset}`;
+  const url = `${baseUrl}/search?q=${search}&offset=${offset}`;
   const page = await browser.newPage();
-  await page.goto(baseUrl, {
+  await page.goto(url, {
     waitUntil: 'domcontentloaded'
   });
 
@@ -23,19 +25,24 @@ async function scrapeRecipesFromPage(
       .querySelectorAll('[id^="mntl-card-list-items_"]')
       .forEach((element) => {
         if (element instanceof HTMLAnchorElement) {
+          const getNumberReviews = () => {
+            const numberReviewsNode = element.querySelector(
+              '.mm-recipes-card-meta__rating-count-number'
+            );
+            const numberReviewsText = numberReviewsNode?.firstChild;
+            const numberReviews = Number(
+              numberReviewsNode
+                ?.removeChild(numberReviewsText!)
+                .textContent?.replace(',', '')
+            );
+            return numberReviews;
+          };
+
           const name = element.querySelector('.card__title')?.textContent;
-          const numberReviewsNode = element.querySelector(
-            '.mm-recipes-card-meta__rating-count-number'
-          );
-          const numberReviewsText = numberReviewsNode?.firstChild;
-          const numberReviews = Number(
-            numberReviewsNode
-              ?.removeChild(numberReviewsText!)
-              .textContent?.replace(',', '')
-          );
+
           data.push({
             name,
-            numberReviews,
+            numberReviews: getNumberReviews(),
             url: element.href
           });
         }
@@ -52,10 +59,9 @@ export async function scrapeRecipes(
   pages: number = 1
 ): Promise<Recipe[]> {
   search = search.replace(' ', '+');
-
   const recipes: Recipe[] = [];
 
-  // here we loop for the number of pages
+  // we loop for the number of pages we want to scrape
   for (let i = 0; i < pages; i++) {
     recipes.push(...(await scrapeRecipesFromPage(browser, search, i)));
   }

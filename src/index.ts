@@ -5,14 +5,13 @@
 
 import Buster from 'phantombuster';
 import puppeteer from 'puppeteer';
-import { scrapeRecipes } from './scraping/allRecipes';
+import { scrapeRecipes } from './scraping';
 import { validateArgs } from './utils/validation';
 
 const buster = new Buster();
 
 (async () => {
   try {
-    // const arg = buster.argument as Arguments;
     const { search, pages } = validateArgs(buster.argument);
     const browser = await puppeteer.launch({
       args: ['--no-sandbox']
@@ -33,7 +32,7 @@ const buster = new Buster();
     await browser.close();
     process.exit();
   } catch (error) {
-    console.error(error);
+    console.error('An error occured during scraping process', error);
     process.exit(1);
   }
 })();
